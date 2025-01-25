@@ -123,20 +123,23 @@ class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         #rewards
         scale_factor = 10 #distance((0, 0), (2*self.max_x_pos, 2*self.max_y_pos))
 
-        reward = (dist_to_terminal_prev - dist_to_terminal)/scale_factor - 0.001
+        self.reward = (dist_to_terminal_prev - dist_to_terminal)/scale_factor - 0.001
 
         #rewards based on termination
         if terminated:
-            reward += 100.0
+            self.reward += 100.0
         
         if truncated:
-            reward -= 1
+            self.reward -= 1
             
         if not self.is_in_bounds(x, y):
-            reward -= 1
+            self.reward -= 1
             
         # Render
-        self.render()   
+        self.render()
+
+        # Iterate
+        self.n_iter += 1   
     
         return np.array(self.state, dtype=np.float32), reward, terminated, truncated, {}
 
@@ -156,6 +159,9 @@ class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         
         # Render
         self.render()
+
+        # Start iteration
+        self.n_iter = 0
     
         return np.array(self.state, dtype=np.float32), {}
     
