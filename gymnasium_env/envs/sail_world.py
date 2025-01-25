@@ -7,6 +7,8 @@ import numpy as np
 from ..utils import *
 import gymnasium as gym
 from gymnasium import spaces
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 
 
@@ -21,23 +23,21 @@ def distance(pos_1, pos_2):
 class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
     def __init__(self):
-   
+        
+        metadata = {"render_modes": ["human", "rgb_array", "ansi"], 'render_fps': 8}
+
         #sailboat
         self.mass_b = 100
         self.S = 5
-        
-        
-        
         
         #wind
         self.true_wind_magnitude = 4 
         self.theta_true_wind = np.pi 
         
-        #enviroment 
+        #environment 
         self.rho_a = 1.225
 
-        
-        #minima and maxima of actiona an observation spaces
+        #minima and maxima of actions and observation spaces
         self.max_action = np.pi/4   #self.dtheta_b = 0.01 #discrete arrproach turining rate 
         self.min_action = -np.pi/4
         
@@ -68,7 +68,6 @@ class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.x_threshold = 2.4
         
         
-        
         self.low_state = np.array(
             [-self.max_x_pos, -self.max_y_pos, -self.max_x_vel, -self.max_y_vel], dtype=np.float32
         )
@@ -86,6 +85,11 @@ class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         )
 
         self.state: np.ndarray | None = None
+
+        # Rendering variables
+        self.fig = None
+        self.render_mode = "human"
+        self.fps = self.metadata['render_fps']
 
     def is_in_bounds(self, x, y):
         return -self.max_x_pos <= x <= self.max_x_pos and -self.max_y_pos <= y <= self.max_y_pos
@@ -131,7 +135,8 @@ class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         if not self.is_in_bounds(x, y):
             reward -= 1
             
-            
+        # Render
+        self.render()   
     
         return np.array(self.state, dtype=np.float32), reward, terminated, truncated, {}
 
@@ -149,7 +154,87 @@ class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         #here also define new wind values and initial conditions? but id doesnt just have ot be that, we can apply  more things 
         self.state = np.array([x_0, y_0, v_x_0, v_y_0]) #define the initial state
         
+        # Render
+        self.render()
     
         return np.array(self.state, dtype=np.float32), {}
+    
+    def render(self):
+        """
+        Render the environment.
+        """
+        if self.render_mode is None:
+            return None
+        
+        elif self.render_mode == "ansi":
+            s = f"{self.n_iter},{self.agent_xy[0]},{self.agent_xy[1]},{self.reward},{self.done},{self.agent_action}\n"
+            #print(s)
+            return s
+
+        elif self.render_mode == "rgb_array":
+            self.render_frame()
+            self.fig.canvas.draw()
+            img = np.array(self.fig.canvas.renderer.buffer_rgba())
+            return img
+    
+        elif self.render_mode == "human":
+            self.render_frame()
+            plt.pause(1/self.fps)
+            return None
+        
+        else:
+            raise ValueError(f"Unsupported rendering mode {self.render_mode}")
+        
+    def render_frame(self):
+        if self.fig is None:
+            self.render_initial_frame()
+            self.fig.canvas.mpl_connect('close_event', self.close)
+        else:
+            self.update_agent_patch()
+        self.ax.set_title(f"Step: {self.n_iter}, Reward: {self.reward}")
+
+    def render_initial_frame(self):
+        """
+        Render the initial frame.
+
+        @NOTE: 0: free cell (white), 1: obstacle (black), 2: start (red), 3: goal (green)
+        """
+        data = self.obstacles.copy()
+        data[self.start_xy] = 2
+        data[self.goal_xy] = 3
+
+        colors = ['white', 'black', 'red', 'green']
+        bounds=[i-0.1 for i in [0, 1, 2, 3, 4]]
+
+        # create discrete colormap
+        cmap = mpl.colors.ListedColormap(colors)
+        norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+
+        plt.ion()
+        fig, ax = plt.subplots(tight_layout=True)
+        self.fig = fig
+        self.ax = ax
+
+        #ax.grid(axis='both', color='#D3D3D3', linewidth=2) 
+        ax.grid(axis='both', color='k', linewidth=1.3) 
+        ax.set_xticks(np.arange(0, data.shape[1], 1))  # correct grid sizes
+        ax.set_yticks(np.arange(0, data.shape[0], 1))
+        ax.tick_params(
+            bottom=False, 
+            top=False, 
+            left=False, 
+            right=False, 
+            labelbottom=False, 
+            labelleft=False
+        ) 
+
+        # draw the grid
+        ax.imshow(
+            data, 
+            cmap=cmap, 
+            norm=norm,
+            extent=[0, data.shape[1], data.shape[0], 0],
+            interpolation='none'
+        )
     
     
