@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import numpy as np
 
-from ..utils import *
+from utils import *
 import gymnasium as gym
 from gymnasium import spaces
 import matplotlib.pyplot as plt
@@ -25,7 +25,8 @@ class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
     def __init__(self):
         
-        metadata = {"render_modes": ["human", "rgb_array", "ansi"], 'render_fps': 8}
+        self.car = Car(10, 40)
+        self.surf = None
 
         #sailboat
         self.mass_b = 100
@@ -87,11 +88,6 @@ class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         self.state: np.ndarray | None = None
 
-        # Rendering variables
-        self.fig = None
-        self.render_mode = "human"
-        self.fps = self.metadata['render_fps']
-
     def is_in_bounds(self, x, y):
         return -self.max_x_pos <= x <= self.max_x_pos and -self.max_y_pos <= y <= self.max_y_pos
 
@@ -145,7 +141,7 @@ class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         super().reset(seed=seed) #we get a new seed
         # Note that if you use custom reset bounds, it may lead to out-of-bound
         # state/observations.
-        
+        self.car = Car((0, 0))
         self.t = 0
         # Boat initial conditions/parameters, these will be initialized as the state should do this randomly
 
@@ -167,7 +163,50 @@ class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         self.surf.fill((50, 50, 50))
         pygame.draw.circle(self.surf, (50, 200, 50), self.terminal_state, 30)
-        self.SailBoat.draw(self.surf)
+        self.car.draw(self.surf)
         pygame.display.flip()
+
+class Car(object):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.speed = 0
+        self.angle = 0
+        self.points = [(8, 5), (8, -5), (-8, -5), (-8, 5), (8, 5)]
+
+    def step(self, throttle, steer):
+        throttle = max(-1, min(1, throttle)) * 0.2
+        steer = max(-1, min(1, steer)) * 5e-1
+
+        self.speed += throttle
+        # Clip speed
+        self.speed = max(-2, min(10, self.speed))
+        self.angle = (self.angle + steer) % (2 * math.pi)
+        self.x += self.speed * math.cos(self.angle)
+        self.y += self.speed * math.sin(self.angle)
+
+    def draw(self, surface):
+        points = [rotate(x, y, self.angle) for x, y in self.points]
+        points = list([(x + self.x, y + self.y) for x, y in points])
+        pygame.draw.polygon(surface, (50, 150, 200), points)
+
+    def pos(self):
+        return self.x, self.y
     
-    
+def rotate(x, y, angle):
+    new_x = math.cos(angle) * x - math.sin(angle) * y
+    new_y = math.sin(angle) * x + math.cos(angle) * y
+    return new_x, new_y
+
+
+env = SailBoatEnv()
+target_speed = 8
+env.draw()
+'''
+while True:
+    state = env.reset()
+    done = False
+    while not done:
+        speed = state[3]
+        throttle = target_speed - speed 
+        '''
