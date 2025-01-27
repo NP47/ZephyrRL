@@ -9,6 +9,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import pygame
 
 
 
@@ -134,9 +135,6 @@ class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             
         if not self.is_in_bounds(x, y):
             self.reward -= 1
-            
-        # Render
-        self.render()
 
         # Iterate
         self.n_iter += 1   
@@ -156,91 +154,20 @@ class SailBoatEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         
         #here also define new wind values and initial conditions? but id doesnt just have ot be that, we can apply  more things 
         self.state = np.array([x_0, y_0, v_x_0, v_y_0]) #define the initial state
-        
-        # Render
-        self.render()
 
         # Start iteration
         self.n_iter = 0
     
         return np.array(self.state, dtype=np.float32), {}
-    
-    def render(self):
-        """
-        Render the environment.
-        """
-        if self.render_mode is None:
-            return None
-        
-        elif self.render_mode == "ansi":
-            s = f"{self.n_iter},{self.agent_xy[0]},{self.agent_xy[1]},{self.reward},{self.done},{self.agent_action}\n"
-            #print(s)
-            return s
 
-        elif self.render_mode == "rgb_array":
-            self.render_frame()
-            self.fig.canvas.draw()
-            img = np.array(self.fig.canvas.renderer.buffer_rgba())
-            return img
-    
-        elif self.render_mode == "human":
-            self.render_frame()
-            plt.pause(1/self.fps)
-            return None
-        
-        else:
-            raise ValueError(f"Unsupported rendering mode {self.render_mode}")
-        
-    def render_frame(self):
-        if self.fig is None:
-            self.render_initial_frame()
-            self.fig.canvas.mpl_connect('close_event', self.close)
-        else:
-            self.update_agent_patch()
-        self.ax.set_title(f"Step: {self.n_iter}, Reward: {self.reward}")
+    def draw(self):
+        if self.surf == None:
+            pygame.init()
+            self.surf =  pygame.display.set_mode((110, 110))
 
-    def render_initial_frame(self):
-        """
-        Render the initial frame.
-
-        @NOTE: 0: free cell (white), 1: obstacle (black), 2: start (red), 3: goal (green)
-        """
-        data = self.obstacles.copy()
-        data[self.start_xy] = 2
-        data[self.goal_xy] = 3
-
-        colors = ['white', 'black', 'red', 'green']
-        bounds=[i-0.1 for i in [0, 1, 2, 3, 4]]
-
-        # create discrete colormap
-        cmap = mpl.colors.ListedColormap(colors)
-        norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
-
-        plt.ion()
-        fig, ax = plt.subplots(tight_layout=True)
-        self.fig = fig
-        self.ax = ax
-
-        #ax.grid(axis='both', color='#D3D3D3', linewidth=2) 
-        ax.grid(axis='both', color='k', linewidth=1.3) 
-        ax.set_xticks(np.arange(0, data.shape[1], 1))  # correct grid sizes
-        ax.set_yticks(np.arange(0, data.shape[0], 1))
-        ax.tick_params(
-            bottom=False, 
-            top=False, 
-            left=False, 
-            right=False, 
-            labelbottom=False, 
-            labelleft=False
-        ) 
-
-        # draw the grid
-        ax.imshow(
-            data, 
-            cmap=cmap, 
-            norm=norm,
-            extent=[0, data.shape[1], data.shape[0], 0],
-            interpolation='none'
-        )
+        self.surf.fill((50, 50, 50))
+        pygame.draw.circle(self.surf, (50, 200, 50), self.terminal_state, 30)
+        self.SailBoat.draw(self.surf)
+        pygame.display.flip()
     
     
