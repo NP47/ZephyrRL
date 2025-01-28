@@ -57,7 +57,7 @@ L, B, T, CB = loaded_data["L"], loaded_data["B"], loaded_data["T"], loaded_data[
 
 ######################################################HYDRODYNAMIC FORCES#########################################
 
-def maneuver(Ui, u, v, r, delta, shallow, sail, wind):
+def maneuver(Ui, u, v, r, delta, shallow):
     # Load the lever position to speed mapping from the pickle file
 
     # Coefficients from Ship Geometry.
@@ -134,19 +134,8 @@ def maneuver(Ui, u, v, r, delta, shallow, sail, wind):
 
 def trajectory(velocity, rudder, depth):
 
-    #Coefficients from Ship Geometry.
-    with open('ShipGeometry.pkl', 'rb') as f:
-        data = pickle.load(f)
-
-    m = data['m']
-    xG = data['xG']
-    Iz = data['Iz']
-
-    
     # shallow water
     shallow = depth
-
-    
       
     ####################################################################################
     ####Operating characteristics
@@ -189,7 +178,7 @@ def trajectory(velocity, rudder, depth):
             delta_dot_app = 0
             
         delta_rudder[i+1] = delta_rudder[i] + time_step*delta_dot_app # rudder angle = time*(rudder acceleration)
-        udi, vdi, rdi = maneuver(Ui, u[i], v[i], r[i], delta_rudder[i], shallow, sail, wind) # reading data from function
+        udi, vdi, rdi = maneuver(Ui, u[i], v[i], r[i], delta_rudder[i], shallow) # reading data from function
         ud[i,0] = udi # reading this value (acceleration : axial) from function
         vd[i,0] = vdi # reading this value (acceleration : side) from function
         rd[i,0] = rdi # reading this value (acceleration : yaw) from function
