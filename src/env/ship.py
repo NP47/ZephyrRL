@@ -132,7 +132,7 @@ def maneuver(Ui, u, v, r, delta, shallow, sail, wind):
 ############################################################TRAJECTORY SECTION CALCULATION
 
 
-def trajectory(velocity, wind, depth):
+def trajectory(velocity, rudder, depth):
 
     #Coefficients from Ship Geometry.
     with open('ShipGeometry.pkl', 'rb') as f:
@@ -177,7 +177,7 @@ def trajectory(velocity, wind, depth):
     Ui = velocity
     u[0] = Ui
       
-    for i in range(len(time_part)-1):
+    for i in range(len(time)-1):
      # Initial Check for rudder degree to not exceed 35 degree
         if abs(delta_rudder) > abs(delta):
             delta_rudder[i] = rudder
