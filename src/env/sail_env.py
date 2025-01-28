@@ -88,8 +88,11 @@ class Sailboat(object):
         #essentially applying the actions, the ruder or sail angle change, an dhow that affects the position
 
         depth = 0 #shallow water variable, 0=deep water // 1=shallow water
+
+        #difference between the angle of the boat and the angle of the wind direction.
+        wind_boat_angle = self.wind.dir - self.angle
         
-        velocity = get_speed(self.speed, sail, wind, self.angle)
+        velocity = get_speed(self.speed, sail, wind, wind_boat_angle)
         
         xt, yt, vx, vy, rotation = trajectory(velocity, rudder, depth)
 
