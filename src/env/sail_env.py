@@ -91,10 +91,10 @@ class Sailboat(object):
         
         velocity = get_speed(self.speed, sail, wind, self.angle)
         
-        xt, yt, vx, vy, rotation = trajectory(velocity, wind, depth)
+        xt, yt, vx, vy, rotation = trajectory(velocity, rudder, depth)
 
 
-        self.speed = vx^^2+vy^^2
+        self.speed = vx^2+vy^2
      
         self.x += xt
         self.y += yt
