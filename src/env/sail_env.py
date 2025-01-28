@@ -94,7 +94,7 @@ class Sailboat(object):
         xt, yt, vx, vy, rotation = trajectory(velocity, rudder, depth)
 
 
-        self.speed = vx^2+vy^2
+        self.speed = vx**2+vy**2
      
         self.x += xt
         self.y += yt
