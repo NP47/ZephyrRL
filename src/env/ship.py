@@ -34,15 +34,17 @@ def calculate_lift_force(deg_sail, WV, deg_boat):
 #def knots_to_mps(knots):
 #    return knots * 0.514444
 
+#def mps_to_knots(mps):
+#    return mps * 1.94384
+
 def get_speed(in_v, sail, wind, angle):
     rho_H2O = 1025  # density of seawater kg/m^3
     Cd = 0.8  # Drag coefficient, from reference ship.
     A_boat = 5.11*2.43  # m^2 simplified from Hallberg-Rassy reference sailboat
     F_drag = 0.5 * rho_H2O * in_v**2 * Cd * A_boat
-    acceleration = calculate_lift_force(sail, wind, angle)-F_drag
+    acceleration = (calculate_lift_force(sail, wind, angle)-F_drag) / 28000 #kg, ship weight reference
     speed = in_v + acceleration*step_time*60 #m/s
     return speed
-
 
 ##########################MANEOUVER
 
