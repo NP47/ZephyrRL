@@ -169,7 +169,7 @@ def trajectory(velocity, rudder, depth):
       
     for i in range(len(time)-1):
      # Initial Check for rudder degree to not exceed 35 degree
-        if abs(delta_rudder) > abs(delta):
+        if abs(delta_rudder[i]) > abs(delta):
             delta_rudder[i] = rudder
         if delta_rudder[i] < 0:
             delta_dot_app = -delta_dot
