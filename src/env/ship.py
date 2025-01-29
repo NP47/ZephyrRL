@@ -162,7 +162,6 @@ def trajectory(velocity, rudder, depth):
     vd = np.zeros((len(time)-1, 1))
     rd = np.zeros((len(time)-1, 1))
 
-    delta_rudder = rudder
     Ui = velocity
     u[0] = Ui
       
