@@ -41,6 +41,21 @@ class Car(object):
         self.speed = 0
         self.angle = 0
         self.points = [(8, 5), (8, -5), (-8, -5), (-8, 5), (8, 5)]
+        
+        
+        
+        self.sail_angle = 0
+        self.rudder_angle = 180
+        self.length = 20
+        self.width = 50
+
+        # Sail geometry: define the four corners of the rectangular sail
+        self.sail_height = self.length * 1.1  # Sail height proportional to boat length
+        self.sail_width = self.width * 0.1    # Sail width proportional to boat width
+
+        # Sail geometry: define the four corners of the rectangular sail
+        self.rudder_height = self.length * 1  # Sail height proportional to boat length
+        self.rudder_width = self.width * 0.2    # Sail width proportional to boat width
 
     def step(self, throttle, steer):
         throttle = max(-1, min(1, throttle)) * 0.2
@@ -53,11 +68,70 @@ class Car(object):
         self.x += self.speed * math.cos(self.angle)
         self.y += self.speed * math.sin(self.angle)
 
-    def draw(self, surface):
+  
+        
+    def draw_boat(self, surface):
+        self.points = [
+        (0, -self.length / 2),           # Front tip (pointy end)
+        (self.width / 2, 0),             # Right side curve
+        (0, self.length / 2),            # Back end (rounded)
+        (-self.width / 2, 0)             # Left side curve
+        ]
+        
         points = [rotate(x, y, self.angle) for x, y in self.points]
         points = list([(x + self.x, y + self.y) for x, y in points])
-        pygame.draw.polygon(surface, (50, 150, 200), points)
+        pygame.draw.polygon(surface, (225, 237, 233), points) 
 
+    def draw_sail(self, surface):
+        # Sail base center (aligned with the middle of the boat)
+        sail_base_x, sail_base_y = self.x, self.y
+
+
+        # Define the four corners of the rectangle
+        sail_points = [
+            (-self.sail_width / 2, 0),  (self.sail_width / 2, 0),               # Bottom-right corner
+            (self.sail_width / 2, -self.sail_height),    # Top-right corner
+            (-self.sail_width / 2, -self.sail_height)    # Top-left corner
+        ]
+
+        # Rotate the sail based on self.sail_angle + self.angle
+        rotated_sail_points = [
+            rotate(x, y, self.sail_angle + self.angle) for x, y in sail_points
+        ]
+
+        # Translate the rotated sail to the sail base position
+        sail_points_translated = [
+            (x + sail_base_x, y + sail_base_y) for x, y in rotated_sail_points
+        ]
+
+        # Draw the sail as a rectangle
+        pygame.draw.polygon(surface, (255, 0, 255), sail_points_translated)  # White sail
+
+    def draw_rudder(self, surface):
+        rudder_base_x, rudder_base_y = self.x, self.y
+
+        rudder_points = [
+            (-self.rudder_width / 2, 0),  (self.rudder_width / 2, 0),   # Bottom-right corner
+            (self.rudder_width / 2, -self.rudder_height),    # Top-right corner
+            (-self.rudder_width / 2, -self.rudder_height)    # Top-left corner
+        ]
+
+        # Rotate the sail based on self.sail_angle + self.angle
+        rotated_rudder_points = [
+            rotate(x, y, self.rudder_angle + self.angle) for x, y in rudder_points
+        ]
+
+        # Translate the rotated sail to the sail base position
+        rudder_points_translated = [
+            (x + rudder_base_x, y + rudder_base_y) for x, y in rotated_rudder_points
+        ]
+
+        pygame.draw.polygon(surface, (120,20,20), rudder_points_translated)  # White sail
+
+    def draw(self, surface):
+        self.draw_boat(surface)
+        self.draw_sail(surface)
+        self.draw_rudder(surface)
     def pos(self):
         return self.x, self.y
 
@@ -70,6 +144,8 @@ class CarEnv(object):
         self.surf = None
         self.done = True
         self.use_easy_state = use_easy_state
+        
+        
 
     def reset(self):
         self.car = Car(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1))
@@ -77,17 +153,66 @@ class CarEnv(object):
         self.target = (screen_width - 1)/2, (screen_width - 1)/2
         self.done = False
         self.steps = 0
+        
+        self.wind_dir = np.pi + 0.1*np.random.uniform(-np.pi,np.pi)
+        self.wind_speed = 10 + np.random.randint(-10,10)
+        
+        
         return self.__state__()
 
-    def draw(self):
+    def draw_surf(self):
+        self.surf.fill((6, 66, 115))
+        pygame.draw.circle(self.surf, (194, 178, 128), self.target, 30)
+        pygame.draw.circle(self.surf, (150, 90, 62), (self.target[0] + 10, self.target[1] - 5) , 5)
+    
+    def draw_wind_arrow(self):
+        arrow_x = self.surf.get_width() * 0.9
+        arrow_y = self.surf.get_height() * 0.1
+
+
+
         
+        # Arrow dimensions
+        arrow_length = 48
+        arrow_tip_x = arrow_x + arrow_length * math.cos(self.wind_dir)
+        arrow_tip_y = arrow_y + arrow_length * math.sin(self.wind_dir)
+        arrow_base_x = arrow_x
+        arrow_base_y = arrow_y
+
+        # Draw the arrow line
+        pygame.draw.line(self.surf, (255, 0, 0), (arrow_base_x, arrow_base_y), (arrow_tip_x, arrow_tip_y), 3)
+
+        # Arrowhead points
+        arrowhead_length = 10
+        arrowhead_angle = math.pi / 6  # 30 degrees
+        left_arrowhead_x = arrow_tip_x - arrowhead_length * math.cos(self.wind_dir - arrowhead_angle)
+        left_arrowhead_y = arrow_tip_y - arrowhead_length * math.sin(self.wind_dir - arrowhead_angle)
+        right_arrowhead_x = arrow_tip_x - arrowhead_length * math.cos(self.wind_dir + arrowhead_angle)
+        right_arrowhead_y = arrow_tip_y - arrowhead_length * math.sin(self.wind_dir + arrowhead_angle)
+
+         # Draw the arrowhead
+        pygame.draw.polygon(self.surf, (255, 0, 0), [(arrow_tip_x, arrow_tip_y),
+                                                (left_arrowhead_x, left_arrowhead_y),
+                                                (right_arrowhead_x, right_arrowhead_y)])
+
+        # Display wind speed next to the arrow
+        font = pygame.font.Font(None, 24)
+        wind_speed_text = font.render(f"{self.wind_speed} m/s", True, (255, 255, 255))
+        text_offset_x = -15  # Offset to position text near the arrow
+        text_offset_y = 60
+        self.surf.blit(wind_speed_text, (arrow_x + text_offset_x, arrow_y + text_offset_y))
+
+        pygame.draw.circle(self.surf, (0, 0, 0), (arrow_x, arrow_y), 50, width=2)
+
+    def draw(self):
         if self.surf is None:
             pygame.init()
             self.surf = pygame.display.set_mode((screen_width, screen_height))
-        self.surf.fill((50, 50, 50))
-        pygame.draw.circle(self.surf, (50, 200, 50), self.target, 30)
+        self.draw_surf()
         self.car.draw(self.surf)
+        self.draw_wind_arrow()
         pygame.display.flip()
+
 
     def step(self, action):
         self.steps += 1
