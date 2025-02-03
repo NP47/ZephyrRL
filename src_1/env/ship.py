@@ -147,8 +147,8 @@ def trajectory(velocity, rudder, depth):
     delta = -35
     delta_dot = 2
 
-    time_total = step_time*60
-    time_step = 0.5
+    time_total = 0.1 + step_time*0
+    time_step = 0.1
     
     ###############################################################################################
     time = np.transpose(np.arange(0, time_total+time_step, time_step)) # creating time matrix for test

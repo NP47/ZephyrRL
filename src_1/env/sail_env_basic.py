@@ -26,33 +26,6 @@ def rkf45_step(f, t, z, h, args=()):
 
     return z_next
 
-def ivp_solver(ode_sys, z_0, t_eval, args=()):
-    N = len(t_eval)
-    D = len(z_0)
-    
-    z_sol = np.zeros((N, D))
-    z_sol[0] = z_0 
-    
-        
-    for i in range(1, N):
-        
-        if i == int(N/4):
-            theta_b_updated = args[0] - np.pi/2
-            args = (theta_b_updated,) + args[1:]
-            
-        if terminal_state_check(z_sol[i-1][:2]): #if true then we have reached the terminal state
-            
-            return z_sol[:i,:], t_eval[:i]
-        
-        h = t_eval[i] - t_eval[i-1]
-        z_sol[i] = rkf45_step(ode_sys, t_eval[i-1], z_sol[i-1], h, args)
-
-
-    return z_sol, t_eval
-
-def set_random_seed(seed):
-    random.seed(seed)
-
 
 def rotate(x, y, angle):
     new_x = math.cos(angle) * x - math.sin(angle) * y
@@ -82,7 +55,7 @@ def lift_coefficient():
     return C_L
 
 def drag_coefficient():
-    C_D = 0.3
+    C_D = 0.6
     return C_D
 
 def lift(C_L, rho, S, v_a, alpha):
@@ -137,46 +110,35 @@ def system_ode(t, z, theta_b, theta_s, theta_w, mag_w_v_t, fixed_param):
     return np.array([dx_dt, dy_dt, dv_x_dt, dv_y_dt])
 
 class BasicSailboat(object):
-    def __init__(self, x, y, theta_boat, v_x = 0.0001, v_y = 0.0001):
+    def __init__(self, x=0, y=0, theta_boat=0, v_x = 0.0001, v_y = 0.0001):
         self.x, self.y = x, y
         self.v_x, self.v_y = v_x, v_y
         self.speed = np.sqrt(v_x**2 + v_y**2)
         self.theta_boat = theta_boat
-        
-        
-        
-
+    
         #sail params
         self.theta_sail = 0 - np.pi/2
-        
-
+    
         #Wind parameters
         mag_w_v_t = 4 
         theta_w_t = np.pi 
 
-
         #boat parameters
-        m_b = 100
-        S = 5
+        m_b = 1000
+        S = 5 #sail size
         
-    
-        rho_a = 1.225
+        rho_a = 1.225 #air density 
 
         #fixed parameters
         self.fixed_param = np.array([m_b, S, rho_a])
             
-        
-        self.t_step = 1
+        self.t_step = 0.5
         self.t = 0
         self.speed = 0
         self.angle = 0
         self.points = [(8, 5), (8, -5), (-8, -5), (-8, 5), (8, 5)]
         
-    
-    
 
-        
-       
         #self.rudder_angle = 180
         self.length = 20
         self.width = 50
@@ -192,13 +154,13 @@ class BasicSailboat(object):
     def step(self, delta_theta_b, wind_info):
         self.t+=self.t_step
         
-        delta_theta_b = (max(-1, min(1, delta_theta_b)) * 5e-1)% (2 * np.pi)
+        delta_theta_b = (max(-1, min(1, delta_theta_b[0])) * 0.8e-1)% (2 * np.pi)
         
         self.theta_wind, self.wind_speed = wind_info
         
         
         args=(self.theta_boat, self.theta_sail, self.theta_wind, self.wind_speed, self.fixed_param)
-        self.theta_boat = args[0] + delta_theta_b
+        self.theta_boat += delta_theta_b
         args = (self.theta_boat,) + args[1:]
         
         z = [self.x, self.y, self.v_x, self.v_y]
@@ -272,8 +234,17 @@ class BasicSailboatEnv(object):
         
 
     def reset(self):
-        self.sailboat = BasicSailboat((screen_width - 1)/2 + 100, (screen_width - 1)/2+100, -3*np.pi/4)#BasicSailboat(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1), np.pi)
+        self.sailboat = BasicSailboat(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1), np.random.uniform(0, np.pi*2))#BasicSailboat(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1), np.pi)
         #self.target = random.randint(0, screen_width - 1), random.randint(0, screen_height - 1) random one
+        
+        #top_left = (screen_width - 1)/7, (screen_width - 1)/7
+        #top_right = screen_width - (screen_width - 1)/7,  (screen_width - 1)/7
+        #bottom_left =  (screen_width - 1)/7, screen_width - (screen_width - 1)/7
+        #bottom_right = screen_width -  (screen_width - 1)/7, screen_width - (screen_width - 1)/7
+        
+        #possible_locatin = [top_left, top_right, bottom_left, bottom_right]
+        #self.target = possible_locatin[np.random.randint(0,4)]
+        
         self.target = (screen_width - 1)/2, (screen_width - 1)/2
         
         self.done = False
