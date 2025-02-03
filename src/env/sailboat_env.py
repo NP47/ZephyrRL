@@ -1,7 +1,7 @@
 import sys
 import os
 
-# Add the project directory (parent of testing and algos) to sys.path
+
 sys.path.append(os.path.abspath(".."))
 
 import random
@@ -15,8 +15,6 @@ from src.utils.rander import draw_sail, draw_boat, draw_wind_arrow
 
 screen_width = 800
 screen_height = 800
-
-
 
 
 def distance(pos1, pos2):
@@ -33,7 +31,7 @@ scale_factor = distance((0, 0), (screen_width, screen_height))
 
 
 class Sailboat(object):
-    def __init__(self, x=0, y=0, theta_boat=0, theta_sail = 0,  v_x = 0.0001, v_y = 0.0001):
+    def __init__(self, x=0, y=0, theta_boat= 0, theta_sail = 0,  v_x = 0.0001, v_y = 0.0001):
         self.x, self.y = x, y
         self.v_x, self.v_y = v_x, v_y
         self.speed = np.sqrt(v_x**2 + v_y**2)
@@ -63,14 +61,12 @@ class Sailboat(object):
     def step(self, actions, wind_info):
         
         delta_theta_b = actions
-        
-        #print(delta_theta_b)
-        delta_theta_b =  max(-np.pi/6, min(np.pi/6, delta_theta_b)) * 2e-1#(max(-np.pi/8, min(1, delta_theta_b)) * 0.8e-1)#% (2 * np.pi) #np.random.choice([-1, 1])*
-        #print(-)
+
+        delta_theta_b = max(-np.pi/36, min(np.pi/36, delta_theta_b)) #(max(-np.pi/8, min(1, delta_theta_b)) * 0.8e-1)#% (2 * np.pi) #np.random.choice([-1, 1])*
         
         
         
-        delta_theta_b
+        
         
         self.theta_wind, self.wind_speed = wind_info
         
@@ -102,27 +98,17 @@ class SailboatEnv(object):
     def __init__(self, wind_settings):
         
         self.wind_settings = wind_settings
+        
         self.sailboat = None
         self.target = None
-        
+    
         self.steps = 0
-        
         self.done = True
-       
         
         self.surf = None
 
     def reset(self):
         self.sailboat = Sailboat(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1), np.random.uniform(0, np.pi*2))#BasicSailboat(random.randint(0, screen_width - 1), random.randint(0, screen_height - 1), np.pi)
-        #self.target = random.randint(0, screen_width - 1), random.randint(0, screen_height - 1) random one
-        
-        #top_left = (screen_width - 1)/7, (screen_width - 1)/7
-        #top_right = screen_width - (screen_width - 1)/7,  (screen_width - 1)/7
-        #bottom_left =  (screen_width - 1)/7, screen_width - (screen_width - 1)/7
-        #bottom_right = screen_width -  (screen_width - 1)/7, screen_width - (screen_width - 1)/7
-        
-        #possible_locatin = [top_left, top_right, bottom_left, bottom_right]
-        #self.target = possible_locatin[np.random.randint(0,4)]
         
         self.target = (screen_width - 1)/2, (screen_width - 1)/2
         
@@ -144,36 +130,40 @@ class SailboatEnv(object):
 
     def step(self, action):
         self.steps += 1
-        if self.done:
-            raise RuntimeWarning("Calling step on environment that is currently in the 'done' state!")
+        
         delta_theta_boat = action[0]
         prev_dist = distance(self.sailboat.pos(), self.target)
         
         self.sailboat.step(delta_theta_boat, (self.theta_wind, self.theta_wind))
-        dist = distance(self.sailboat.pos(), self.target)
+        dist = distance((self.sailboat.x, self.sailboat.y), self.target)
     
         
-        r = (prev_dist - dist)/scale_factor - 0.001
+        r = (prev_dist - dist) / scale_factor - 0.001 * (1 / (1 + self.sailboat.speed))
+
+        if dist > prev_dist: 
+            r -= 0.005  
 
         if not is_in_bounds(self.sailboat.x, self.sailboat.y) or self.steps > 1000:
             r -= 1
             self.done = True
 
-        if dist < 30:
-            r += 1
+        if dist < 50:
+            r += 5  
             self.done = True
         return self.__state__(), r, self.done, None
     
 
     def __state__(self):
   
-       
-        distance_to_target = distance(self.sailboat.pos(), self.target)
+ 
+        distance_to_target = distance((self.sailboat.x, self.sailboat.y), self.target)
         distance_to_target /= scale_factor
-    
+
+        relative_wind = (self.theta_wind - self.sailboat.theta_boat) % (2 * np.pi)
+
 
         return np.array([self.sailboat.x / screen_width, self.sailboat.y / screen_height, self.sailboat.v_x, self.sailboat.v_y,
-                           self.sailboat.speed ,distance_to_target, self.theta_wind, self.wind_speed])
+                           self.sailboat.theta_boat / (2*np.pi),(relative_wind% (2*np.pi))/(2*np.pi), self.wind_speed, distance_to_target])
         
 
     def draw_surf(self):
@@ -193,7 +183,12 @@ class SailboatEnv(object):
 
 
 if __name__ == "__main__":
-    env = SailboatEnv()
+    wind_setting = {
+           "type": "fixed",
+            "wind_speed": 13.4,  # Vary wind speed
+            "theta_wind": 5*np.pi/4,  # Vary wind direction
+    }
+    env = SailboatEnv(wind_setting)
 
     while True:
         state = env.reset()
